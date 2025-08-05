@@ -27,7 +27,7 @@ export default function PostOpportunityPage() {
     const { error: insertError } = await supabase.from("opportunities").insert({
       title,
       description,
-      host_id: user.id,
+      user_id: user.id,
     });
 
     if (insertError) {

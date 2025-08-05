@@ -10,6 +10,24 @@ export default function HostDashboardPage() {
   const [isHost, setIsHost] = useState(false);
   const navigate = useNavigate();
 
+  const handleDeleteOpportunity = async (id: number) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this opportunity?");
+    if (!confirmDelete) return;
+
+    const { error } = await supabase.from("opportunities").delete().eq("id", id);
+
+    if (error) {
+      alert("Failed to delete: " + error.message);
+    } else {
+      setOpportunities((prev) => prev.filter((opp) => opp.id !== id));
+      alert("Opportunity deleted.");
+    }
+  };
+
+  const handleEditOpportunity = (id: number) => {
+    navigate(`/edit-opportunity/${id}`);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -22,7 +40,6 @@ export default function HostDashboardPage() {
 
       const userId = userData.user.id;
 
-      // Get user role
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("role")
@@ -36,14 +53,12 @@ export default function HostDashboardPage() {
 
       setIsHost(true);
 
-      // Fetch host's opportunities
       const { data: opps, error: oppsError } = await supabase
         .from("opportunities")
         .select("*")
-        .eq("host_id", userId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      // Fetch upcoming shadow sessions related to this host’s opportunities
       const { data: sess, error: sessError } = await supabase
         .from("shadow_sessions")
         .select(`
@@ -94,6 +109,34 @@ export default function HostDashboardPage() {
             {opportunities.map((opp) => (
               <li key={opp.id}>
                 <strong>{opp.title}</strong> — {opp.description}
+                <button
+                  onClick={() => handleEditOpportunity(opp.id)}
+                  style={{
+                    marginLeft: "1rem",
+                    backgroundColor: "#4a90e2",
+                    color: "white",
+                    border: "none",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "5px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteOpportunity(opp.id)}
+                  style={{
+                    marginLeft: "0.5rem",
+                    backgroundColor: "#e66",
+                    color: "white",
+                    border: "none",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "5px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
