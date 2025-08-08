@@ -53,7 +53,6 @@ export default function RoleDetailPage() {
           )}
 
           <div className="button-group">
-            <button className="action-button">Apply</button>
             <button className="action-button">Bookmark</button>
             <button className="action-button">Shadow</button>
           </div>

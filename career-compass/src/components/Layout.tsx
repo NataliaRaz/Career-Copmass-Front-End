@@ -1,10 +1,11 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
 import "./Layout.css";
 
 export default function Layout() {
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -23,6 +24,12 @@ export default function Layout() {
     };
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    navigate("/"); // Redirect to homepage
+  };
+
   return (
     <div className="layout">
       <nav className="navbar">
@@ -32,13 +39,17 @@ export default function Layout() {
         <div className="navbar-right">
           <Link to="/">Home</Link>
           <Link to="/explore">Explore</Link>
-          <Link to="/shadow">Book Shadow</Link>
+          <Link to="/shadow">My Sessions</Link>
           <Link to="/bookmarks">My Bookmarks</Link>
+
           {user ? (
-                <Link to="/profile">Profile</Link>
-            ) : (
-                <Link to="/profile">Sign In</Link>
-            )}
+            <>
+              <Link to="/profile">Profile</Link>
+              <button onClick={handleLogout} className="nav-button">Logout</button>
+            </>
+          ) : (
+            <Link to="/profile" className="nav-button">Login</Link>
+          )}
         </div>
       </nav>
 

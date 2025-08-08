@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import HomePage from "./pages/HomePage";
 import ExplorePage from "./pages/ExplorePage";
-import ShadowPage from "./pages/ShadowPage";
+import SessionsPage from "./pages/SessionsPage";
 import PostOpportunityPage from "./pages/PostOpportunityPage";
 import AboutPage from "./pages/AboutPage";
 import BookmarksPage from "./pages/BookmarksPage";
@@ -21,8 +21,9 @@ export default function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="explore" element={<ExplorePage />} />
-          <Route path="shadow" element={<ShadowPage />} />
+          <Route path="shadow" element={<SessionsPage />} />
           <Route path="post-opportunity" element={<PostOpportunityPage />} />
+          <Route path="edit-opportunity/:id" element={<PostOpportunityPage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="bookmarks" element={<BookmarksPage />} />
           <Route path="mentor/:mentorId" element={<MentorProfilePage />} />

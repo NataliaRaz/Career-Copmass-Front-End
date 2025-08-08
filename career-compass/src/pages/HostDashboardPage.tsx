@@ -34,7 +34,7 @@ export default function HostDashboardPage() {
 
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
-        navigate("/profile"); // redirect to login
+        navigate("/profile");
         return;
       }
 
@@ -47,7 +47,7 @@ export default function HostDashboardPage() {
         .single();
 
       if (profileError || profile?.role !== "host") {
-        navigate("/"); // Not authorized
+        navigate("/");
         return;
       }
 
@@ -64,7 +64,7 @@ export default function HostDashboardPage() {
         .select(`
           id,
           date_time,
-          mentee_id,
+          user_id,
           opportunity_id,
           opportunities (
             title
@@ -89,76 +89,83 @@ export default function HostDashboardPage() {
 
   const handlePost = () => navigate("/post-opportunity");
 
-  if (loading) return <p>Loading dashboard...</p>;
+  if (loading) return <p className="text-center text-gray-500">Loading dashboard...</p>;
   if (!isHost) return null;
 
   return (
-    <div className="page">
-      <h2>👋 Welcome, Host</h2>
+    <div className="max-w-5xl mx-auto px-4 py-10">
+      {/* Header without Logout */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold">👋 Welcome, Host</h2>
+      </div>
 
-      <button onClick={handlePost} className="button">
+      <button
+        onClick={handlePost}
+        className="bg-blue-600 text-white px-4 py-2 rounded-md mb-8 hover:bg-blue-700 transition"
+      >
         ➕ Post New Opportunity
       </button>
 
-      <div className="dashboard-section">
-        <h3>📋 Posted Opportunities</h3>
+      {/* Posted Opportunities */}
+      <section className="mb-10">
+        <h3 className="text-2xl font-semibold mb-4">📋 Posted Opportunities</h3>
         {opportunities.length === 0 ? (
-          <p>No opportunities posted yet.</p>
+          <p className="text-gray-600">No opportunities posted yet.</p>
         ) : (
-          <ul>
+          <div className="space-y-4">
             {opportunities.map((opp) => (
-              <li key={opp.id}>
-                <strong>{opp.title}</strong> — {opp.description}
-                <button
-                  onClick={() => handleEditOpportunity(opp.id)}
-                  style={{
-                    marginLeft: "1rem",
-                    backgroundColor: "#4a90e2",
-                    color: "white",
-                    border: "none",
-                    padding: "0.25rem 0.5rem",
-                    borderRadius: "5px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteOpportunity(opp.id)}
-                  style={{
-                    marginLeft: "0.5rem",
-                    backgroundColor: "#e66",
-                    color: "white",
-                    border: "none",
-                    padding: "0.25rem 0.5rem",
-                    borderRadius: "5px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Delete
-                </button>
-              </li>
+              <div
+                key={opp.id}
+                className="border border-gray-200 p-5 rounded-xl shadow-sm hover:shadow-md transition flex justify-between items-start"
+              >
+                <div>
+                  <h4 className="text-lg font-medium text-blue-700">{opp.title}</h4>
+                  <p className="text-gray-600">{opp.description}</p>
+                </div>
+                <div className="flex-shrink-0 ml-4 space-x-2">
+                  <button
+                    onClick={() => handleEditOpportunity(opp.id)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOpportunity(opp.id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-      </div>
+      </section>
 
-      <div className="dashboard-section">
-        <h3>📅 Upcoming Shadow Sessions</h3>
+      {/* Shadow Sessions */}
+      <section>
+        <h3 className="text-2xl font-semibold mb-4">📅 Upcoming Shadow Sessions</h3>
         {sessions.length === 0 ? (
-          <p>No upcoming sessions yet.</p>
+          <p className="text-gray-600">No upcoming sessions yet.</p>
         ) : (
-          <ul>
+          <ul className="space-y-3">
             {sessions.map((s) => (
-              <li key={s.id}>
-                <span>{new Date(s.date_time).toLocaleString()}</span> — Mentee ID:{" "}
-                <strong>{s.mentee_id}</strong> for{" "}
-                <strong>{s.opportunities?.title}</strong>
+              <li
+                key={s.id}
+                className="border border-gray-100 p-4 rounded-lg bg-gray-50 shadow-sm"
+              >
+                <p className="text-gray-700">
+                  <strong>{new Date(s.date_time).toLocaleString()}</strong> — Mentee ID:{" "}
+                  <span className="text-blue-700 font-semibold">{s.mentee_id}</span> for{" "}
+                  <span className="text-gray-800 font-medium">
+                    {s.opportunities?.title}
+                  </span>
+                </p>
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -60,3 +60,17 @@
 .footer-links a:hover {
   text-decoration: underline;
 }
+
+.nav-button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  margin-left: 1rem;
+  text-decoration: underline;
+}
+.nav-button:hover {
+  color: #0077cc;
+}

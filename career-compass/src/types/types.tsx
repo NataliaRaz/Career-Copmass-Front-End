@@ -23,7 +23,14 @@ export interface Opportunity {
   id?: number;
   title: string;
   description: string;
-  host_id: string;
+  user_id: string;
+  mentor_name?: string;
+  mentor_title?: string;
+  format?: string;
+  duration?: string;
+  date?: string;
+  location?: string;
+  requirements?: string;
   created_at?: string;
 };
 
@@ -42,7 +49,7 @@ export interface Mentor {
 export interface ShadowSession {
   id: number;
   date_time: string;
-  mentee_id: string;
+  user_id: string;
   opportunity_id: number;
   opportunities?: {
     title: string;
