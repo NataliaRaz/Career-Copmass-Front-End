@@ -45,6 +45,21 @@ export default function BookmarksList() {
     fetchUserData();
   }, []);
 
+  const removeBookmark = async (bookmarkId: number) => {
+    const { error } = await supabase
+      .from("bookmarks")
+      .delete()
+      .eq("id", bookmarkId);
+
+    if (error) {
+      console.error("Error removing bookmark:", error.message);
+      return;
+    }
+
+    // Update local state
+    setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
+  };
+
   if (loading) return <p className="text-gray-500 p-6">Loading...</p>;
 
   if (!user) {
@@ -74,7 +89,6 @@ export default function BookmarksList() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* Hero Section */}
       <Hero
         title="My Bookmarks"
         subtitle="Saved opportunities for later"
@@ -83,14 +97,17 @@ export default function BookmarksList() {
 
       <Container className="pb-14">
         {bookmarks.length === 0 ? (
-          <p className="text-center text-gray-600">You have no saved bookmarks.</p>
+          <p className="text-center text-gray-600">
+            You have no saved bookmarks.
+          </p>
         ) : (
           <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
             {bookmarks.map((b) => {
               const opp = b.opportunities;
               const isScheduled = scheduledIds.includes(opp.id);
               const daysAgo = Math.floor(
-                (Date.now() - new Date(opp.created_at).getTime()) / (1000 * 60 * 60 * 24)
+                (Date.now() - new Date(opp.created_at).getTime()) /
+                  (1000 * 60 * 60 * 24)
               );
 
               return (
@@ -98,7 +115,6 @@ export default function BookmarksList() {
                   key={b.id}
                   className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
                 >
-                  {/* Subtle inside-corner accent */}
                   <div className="pointer-events-none absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 transition-opacity group-hover:opacity-100 rounded-bl-full" />
 
                   <div>
@@ -132,7 +148,6 @@ export default function BookmarksList() {
                     </div>
                   </div>
 
-                  {/* Actions (updated) */}
                   <div className="mt-6 flex flex-col gap-3">
                     <Link
                       to={`/shadow/${opp.id}`}

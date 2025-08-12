@@ -6,7 +6,6 @@ import SessionsPage from "./pages/SessionsPage";
 import PostOpportunityPage from "./pages/PostOpportunityPage";
 import AboutPage from "./pages/AboutPage";
 import BookmarksPage from "./pages/BookmarksPage";
-import MentorProfilePage from "./pages/MentorProfilePage";
 import ProfilePage from "./pages/ProfilePage";
 import UnifiedSignUpPage from "./pages/UnifiedSignUpPage";
 import ShadowSessionDetailPage from "./pages/ShadowSessionDetailPage";
@@ -33,7 +32,6 @@ export default function App() {
         {/* Other */}
         <Route path="about" element={<AboutPage />} />
         <Route path="bookmarks" element={<BookmarksPage />} />
-        <Route path="mentor/:mentorId" element={<MentorProfilePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="signup" element={<UnifiedSignUpPage />} />
         <Route path="shadow/:roleId" element={<ShadowSessionDetailPage />} />

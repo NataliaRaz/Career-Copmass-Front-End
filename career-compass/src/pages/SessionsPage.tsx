@@ -89,8 +89,7 @@ export default function SessionsPage() {
           bgClassName="bg-gray-100"
         />
         <section className="bg-gray-50 min-h-screen">
-          <Container className="pb-14"></Container>
-          <Container>
+          <Container className="pb-14">
             <div className="mx-auto max-w-md rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
               <p className="text-gray-700 mb-4">
                 Please log in to view and manage your sessions.

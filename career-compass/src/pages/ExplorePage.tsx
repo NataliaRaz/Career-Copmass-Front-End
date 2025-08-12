@@ -14,7 +14,6 @@ export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [format, setFormat] = useState("");
   const [duration, setDuration] = useState("");
-  const [profession, setProfession] = useState("");
   const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([]);
   const [scheduledIds, setScheduledIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -101,7 +100,11 @@ export default function ExplorePage() {
     setLoading(false);
   };
 
-  const handleBookmark = async (opportunityId: number) => {
+  const handleBookmark = async (opportunityId: number | undefined) => {
+    if (!opportunityId) {
+      return;
+    }
+    
     if (!user) {
       alert("You need to log in to bookmark.");
       return;
@@ -180,11 +183,11 @@ export default function ExplorePage() {
         ) : (
           <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
             {opportunities.map((op, i) => {
-              const daysAgo = Math.floor(
+              const daysAgo = op.created_at ? Math.floor(
                 (Date.now() - new Date(op.created_at).getTime()) / (1000 * 60 * 60 * 24)
-              );
-              const isBookmarked = bookmarkedIds.includes(op.id);
-              const isScheduled = scheduledIds.includes(op.id);
+              ) : 0;
+              const isBookmarked = op.id ? bookmarkedIds.includes(op.id) : false;
+              const isScheduled = op.id ? scheduledIds.includes(op.id) : false;
 
               return (
                 <li
