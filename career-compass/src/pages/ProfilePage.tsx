@@ -13,7 +13,7 @@ type Profile = {
   bio?: string | null;
   role?: "user" | "host" | null;
   skills?: string[] | null;
-  preferences?: string | null; // free text (e.g., interests)
+  preferences?: string | null;
 };
 
 export default function UserProfilePage() {
