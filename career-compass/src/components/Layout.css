@@ -1,3 +1,14 @@
+html, body, #root { height: 100%; }
+body { margin: 0; }
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Consistent site container (≈ Tailwind max-w-7xl) */
+.container {
+  max-width: 1280px; /* 80rem */
+  margin: 0 auto;
+  padding: 0 16px;   /* side padding */
+}
+
 .layout {
   display: flex;
   flex-direction: column;

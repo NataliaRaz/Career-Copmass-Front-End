@@ -1,8 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { supabase } from "../utils/supabaseClient"; // assumes you have a client set up
-// import { Card, CardContent } from "@/components/ui/card";
-// import { Button } from "@/components/ui/button";
+import { supabase } from "../utils/supabaseClient";
 
 interface Session {
   id: number;

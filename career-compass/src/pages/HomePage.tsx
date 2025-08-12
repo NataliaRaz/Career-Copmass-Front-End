@@ -1,24 +1,25 @@
 import { Link } from "react-router-dom";
-import "./SharedStyles.css";
+import Hero from "../components/Hero";
+import Container from "../components/Container";
 
 export default function HomePage() {
   return (
     <>
       {/* Hero */}
-      <div className="hero">
-        <h1>Discover Your Future Career Path</h1>
-        <p>
-          Career Compass helps you explore professions, understand roles, and find the best opportunities tailored for you.
-        </p>
-      </div>
+      <Hero
+        title="Discover Your Future Career Path"
+        subtitle="Career Compass helps you explore professions, understand roles, and find the best opportunities tailored for you."
+        bgClassName="bg-gray-100"
+      />
 
       {/* How it works */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-white to-gray-50" />
-        <div className="relative mx-auto max-w-6xl px-4 py-14">
+      <section className="relative overflow-hidden bg-white">
+        <Container>
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900">How it works</h2>
-            <p className="mt-2 text-gray-600">Four simple steps to go from curious to confident.</p>
+            <p className="mt-2 text-gray-600">
+              Four simple steps to go from curious to confident.
+            </p>
           </div>
 
           <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -61,7 +62,6 @@ export default function HomePage() {
                       {s.title}
                     </h3>
                   </div>
-
                   <p className="text-sm text-gray-600">{s.desc}</p>
                 </div>
 
@@ -79,27 +79,29 @@ export default function HomePage() {
               </li>
             ))}
           </ol>
-        </div>
+        </Container>
       </section>
 
       {/* Testimonials */}
-      <div className="featured-section">
-        <h2 className="section-title">What our users say</h2>
-        <div className="cards">
-          <div className="card">
-            <p className="testimonial-text">
-              “Career Compass showed me roles I had never heard of before. It changed my life.”
-            </p>
-            <p className="testimonial-author">— Jamie L., Data Analyst</p>
+      <section className="bg-gray-50 py-14">
+        <Container>
+          <h2 className="text-3xl font-bold text-center mb-10">What our users say</h2>
+          <div className="flex flex-wrap gap-6 justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-md max-w-sm">
+              <p className="text-gray-700 mb-3">
+                “Career Compass showed me roles I had never heard of before. It changed my life.”
+              </p>
+              <p className="text-sm text-gray-500">— Jamie L., Data Analyst</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md max-w-sm">
+              <p className="text-gray-700 mb-3">
+                “I landed a mentorship through this platform that got me into UX research!”
+              </p>
+              <p className="text-sm text-gray-500">— Chris M., UX Researcher</p>
+            </div>
           </div>
-          <div className="card">
-            <p className="testimonial-text">
-              “I landed a mentorship through this platform that got me into UX research!”
-            </p>
-            <p className="testimonial-author">— Chris M., UX Researcher</p>
-          </div>
-        </div>
-      </div>
+        </Container>
+      </section>
     </>
   );
 }

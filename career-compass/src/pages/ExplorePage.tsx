@@ -3,19 +3,18 @@ import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 import type { Opportunity } from "../types/types";
 import Hero from "../components/Hero";
+import Container from "../components/Container";
 
 const FORMATS = ["In-person", "Virtual", "Hybrid"];
 const DURATIONS = ["30 min", "60 min", "90 min", "Half-day", "Full-day"];
-const DEPARTMENTS = ["General", "Engineering", "Design", "Product", "Marketing", "Sales"];
 
 export default function ExplorePage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [format, setFormat] = useState("");
   const [duration, setDuration] = useState("");
-  const [department, setDepartment] = useState("");
+  const [profession, setProfession] = useState("");
   const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([]);
   const [scheduledIds, setScheduledIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,60 +22,59 @@ export default function ExplorePage() {
   const debouncedRef = useRef<number | null>(null);
   const lastReqId = useRef(0);
 
-  // Fetch user + role + bookmarks + scheduled
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
 
       if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setRole(profile?.role ?? null);
-
         const { data: bookmarks } = await supabase
           .from("bookmarks")
           .select("opportunity_id")
           .eq("user_id", user.id);
-        if (bookmarks) setBookmarkedIds(bookmarks.map((b) => b.opportunity_id));
+
+        if (bookmarks) {
+          setBookmarkedIds(bookmarks.map((b: any) => b.opportunity_id));
+        }
 
         const { data: sessions } = await supabase
           .from("shadow_sessions")
           .select("opportunity_id")
           .eq("user_id", user.id);
+
         if (sessions) {
-          const dbScheduled = sessions.map((s) => s.opportunity_id);
-          const localScheduled = JSON.parse(localStorage.getItem("scheduled") || "[]");
-          setScheduledIds(Array.from(new Set([...dbScheduled, ...localScheduled])));
+          const dbScheduled = sessions.map((s: any) => s.opportunity_id);
+          setScheduledIds(Array.from(new Set(dbScheduled)));
         }
+      } else {
+        setBookmarkedIds([]);
+        setScheduledIds([]);
       }
     })();
   }, []);
 
-  // Debounced fetch when search/filters change
   useEffect(() => {
     if (debouncedRef.current) clearTimeout(debouncedRef.current);
     debouncedRef.current = window.setTimeout(() => {
-      void fetchOpportunities(searchQuery.trim(), { format, duration, department });
+      void fetchOpportunities(searchQuery.trim(), { format, duration });
     }, 250);
     return () => {
       if (debouncedRef.current) clearTimeout(debouncedRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, format, duration, department]);
+  }, [searchQuery, format, duration]);
 
-  // Initial fetch
   useEffect(() => {
-    void fetchOpportunities("", { format, duration, department });
+    void fetchOpportunities("", { format, duration });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchOpportunities = async (
     q: string,
-    filters: { format?: string; duration?: string; department?: string }
+    filters: { format?: string; duration?: string
+    }
   ) => {
     setLoading(true);
     setErrorMsg(null);
@@ -87,12 +85,9 @@ export default function ExplorePage() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (q) {
-      query = query.or(`title.ilike.%${q}%,location.ilike.%${q}%`);
-    }
+    if (q) query = query.or(`title.ilike.%${q}%,location.ilike.%${q}%`);
     if (filters.format) query = query.eq("format", filters.format);
     if (filters.duration) query = query.eq("duration", filters.duration);
-    if (filters.department) query = query.eq("department", filters.department);
 
     const { data, error } = await query;
 
@@ -101,133 +96,136 @@ export default function ExplorePage() {
       setErrorMsg(error.message || "Failed to load opportunities");
       setOpportunities([]);
     } else {
-      setOpportunities(data || []);
+      setOpportunities((data as Opportunity[]) || []);
     }
     setLoading(false);
   };
 
   const handleBookmark = async (opportunityId: number) => {
-    if (!user) return alert("You need to log in to bookmark.");
-    if (bookmarkedIds.includes(opportunityId)) return alert("Already bookmarked.");
+    if (!user) {
+      alert("You need to log in to bookmark.");
+      return;
+    }
+    if (bookmarkedIds.includes(opportunityId)) {
+      alert("Already bookmarked.");
+      return;
+    }
 
     const { error } = await supabase.from("bookmarks").insert([
       { user_id: user.id, opportunity_id: opportunityId },
     ]);
-    if (error) alert("Could not bookmark. Try again.");
-    else setBookmarkedIds((prev) => [...prev, opportunityId]);
+
+    if (error) {
+      alert("Could not bookmark. Try again.");
+    } else {
+      setBookmarkedIds((prev) => [...prev, opportunityId]);
+    }
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50">
       <Hero
         title="Explore Opportunities"
         subtitle="Find shadowing sessions by amazing mentors"
+        bgClassName="bg-gray-100"
       >
-        <div className="mx-auto max-w-7xl">
-          {/* Top row: search + (host-only) create button */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-            <input
-              type="text"
-              placeholder="Search by title or location..."
-              className="w-full sm:w-[520px] p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-400"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {role === "host" && (
-              <Link
-                to="/opportunities/new"
-                className="inline-flex items-center justify-center rounded-md border border-blue-700 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition"
-              >
-                + Create Opportunity
-              </Link>
-            )}
-          </div>
+        {/* Search */}
+        <div className="flex justify-center">
+          <input
+            type="text"
+            placeholder="Search by title or location..."
+            className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:border-blue-400"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
 
-          {/* Filters */}
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              className="p-3 border border-gray-300 rounded-md bg-white"
-            >
-              <option value="">All formats</option>
-              {FORMATS.map((f) => (
-                <option key={f} value={f}>{f}</option>
-              ))}
-            </select>
+        {/* Filters */}
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value)}
+            className="p-3 border border-gray-300 rounded-md bg-white"
+          >
+            <option value="">All formats</option>
+            {FORMATS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
 
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="p-3 border border-gray-300 rounded-md bg-white"
-            >
-              <option value="">All durations</option>
-              {DURATIONS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="p-3 border border-gray-300 rounded-md bg-white"
-            >
-              <option value="">All departments</option>
-              {DEPARTMENTS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            className="p-3 border border-gray-300 rounded-md bg-white"
+          >
+            <option value="">All durations</option>
+            {DURATIONS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
       </Hero>
 
       {/* Results */}
-      <div className="mx-auto max-w-7xl px-4 pb-14">
+      <Container className="pb-14">
         {loading && <p className="text-center text-gray-500">Loading…</p>}
         {errorMsg && <p className="text-center text-red-600">{errorMsg}</p>}
 
         {!loading && !errorMsg && opportunities.length === 0 ? (
           <p className="text-center text-gray-500">No shadowing opportunities found.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {opportunities.map((op) => {
-              const daysAgo = Math.floor((Date.now() - new Date(op.created_at).getTime()) / (1000 * 60 * 60 * 24));
+          <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {opportunities.map((op, i) => {
+              const daysAgo = Math.floor(
+                (Date.now() - new Date(op.created_at).getTime()) / (1000 * 60 * 60 * 24)
+              );
               const isBookmarked = bookmarkedIds.includes(op.id);
               const isScheduled = scheduledIds.includes(op.id);
 
               return (
-                <div
+                <li
                   key={op.id}
-                  className="relative group flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+                  className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md"
                 >
-                  <div className="pointer-events-none absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 transition-opacity group-hover:opacity-100 rounded-bl-full" />
                   <div>
-                    <Link to={`/shadow/${op.id}`}>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-600 text-blue-700 font-semibold">
+                        {i + 1}
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition">
                         {op.title}
                       </h3>
-                    </Link>
+                    </div>
 
                     {op.mentor_name && (
                       <p className="text-sm text-gray-600 mb-1">
-                        👤 {op.mentor_name}{op.mentor_title ? `, ${op.mentor_title}` : ""}
+                        👤 {op.mentor_name}
+                        {op.mentor_title ? `, ${op.mentor_title}` : ""}
                       </p>
                     )}
 
-                    <p className="text-gray-700 text-sm mb-3">
+                    <p className="text-sm text-gray-600 mb-3">
                       {op.description?.slice(0, 110)}
                       {op.description && op.description.length > 110 ? "..." : ""}
                     </p>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                       {op.format && (
-                        <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">{op.format}</span>
+                        <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">
+                          {op.format}
+                        </span>
                       )}
                       {op.duration && (
-                        <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">{op.duration}</span>
+                        <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">
+                          {op.duration}
+                        </span>
                       )}
                       <span className="ml-auto">
-                        🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
+                        🕓 {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
                       </span>
                     </div>
                   </div>
@@ -235,7 +233,7 @@ export default function ExplorePage() {
                   <div className="mt-6 flex flex-col gap-3">
                     <Link
                       to={`/shadow/${op.id}`}
-                      className="w-full px-4 py-2 rounded-md text-sm font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition"
+                      className="inline-flex w-full items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                     >
                       View Details
                     </Link>
@@ -245,7 +243,7 @@ export default function ExplorePage() {
                         <button
                           onClick={() => handleBookmark(op.id)}
                           disabled={isBookmarked}
-                          className={`w-full px-4 py-2 rounded-md text-sm font-medium transition ${
+                          className={`inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${
                             isBookmarked
                               ? "bg-green-50 text-green-700 border border-green-300 cursor-not-allowed"
                               : "border border-blue-700 text-blue-700 hover:bg-blue-50"
@@ -257,34 +255,34 @@ export default function ExplorePage() {
                         {isScheduled ? (
                           <button
                             disabled
-                            className="w-full px-4 py-2 rounded-md text-sm font-medium bg-green-50 text-green-700 border border-green-300"
+                            className="inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium bg-green-50 text-green-700 border border-green-300"
                           >
                             ✓ Scheduled
                           </button>
                         ) : (
                           <Link
                             to={`/shadow/${op.id}`}
-                            onClick={() => {
-                              const current = JSON.parse(localStorage.getItem("scheduled") || "[]");
-                              const updated = Array.from(new Set([...current, op.id]));
-                              localStorage.setItem("scheduled", JSON.stringify(updated));
-                            }}
-                            className="w-full px-4 py-2 rounded-md text-sm font-medium border border-blue-700 text-blue-700 text-center hover:bg-blue-50 transition"
+                            className="inline-flex w-full items-center justify-center rounded-md border border-blue-700 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition"
                           >
                             Shadow
                           </Link>
                         )}
                       </>
                     ) : (
-                      <p className="text-xs text-gray-400 text-center">Log in to bookmark or shadow</p>
+                      <p className="text-xs text-gray-400 text-center">
+                        Log in to bookmark or shadow
+                      </p>
                     )}
                   </div>
-                </div>
+
+                  {/* Subtle hover accent */}
+                  <div className="pointer-events-none absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 transition-opacity group-hover:opacity-100 rounded-bl-full" />
+                </li>
               );
             })}
-          </div>
+          </ol>
         )}
-      </div>
+      </Container>
     </div>
   );
 }

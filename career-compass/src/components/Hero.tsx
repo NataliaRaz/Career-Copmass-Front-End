@@ -1,19 +1,17 @@
-type HeroProps = {
+type Props = {
   title: string;
   subtitle?: string;
+  bgClassName?: string;
   children?: React.ReactNode;
 };
 
-export default function Hero({ title, subtitle, children }: HeroProps) {
+export default function Hero({ title, subtitle, bgClassName = "bg-gray-100", children }: Props) {
   return (
-    <section className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-white to-gray-50" />
-      <div className="relative mx-auto max-w-7xl px-4 py-12">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900">{title}</h1>
-          {subtitle && <p className="mt-2 text-gray-600">{subtitle}</p>}
-        </div>
-        {children && <div className="mt-8">{children}</div>}
+    <section className={`${bgClassName} py-10`}>
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{title}</h1>
+        {subtitle && <p className="mt-2 text-gray-600">{subtitle}</p>}
+        {children && <div className="mt-6">{children}</div>}
       </div>
     </section>
   );

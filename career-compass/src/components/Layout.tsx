@@ -1,71 +1,107 @@
-import { Link, Outlet, useNavigate } from "react-router-dom";
+// src/layouts/Layout.tsx
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import "./Layout.css";
+import Container from "../components/Container";
 
 export default function Layout() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null); // ✅ Track role
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchUser = async () => {
+    let unsub: any;
+    (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
+      setUser(user ?? null);
 
-    fetchUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        setRole(profile?.role || null);
+      }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+      const { data } = supabase.auth.onAuthStateChange((_e, s) => {
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          supabase
+            .from("profiles")
+            .select("role")
+            .eq("user_id", s.user.id)
+            .single()
+            .then(({ data }) => setRole(data?.role || null));
+        } else {
+          setRole(null);
+        }
+      });
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+      unsub = data?.subscription;
+    })();
+    return () => unsub?.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    navigate("/"); // Redirect to homepage
+    navigate("/", { replace: true });
   };
 
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `px-2 py-1 transition ${
+      isActive
+        ? "underline underline-offset-8 decoration-2 decoration-blue-600"
+        : "hover:underline hover:underline-offset-8"
+    }`;
+
   return (
-    <div className="layout">
-      <nav className="navbar">
-        <div className="navbar-left">
-          <Link to="/" className="logo">Career Compass</Link>
-        </div>
-        <div className="navbar-right">
-          <Link to="/">Home</Link>
-          <Link to="/explore">Explore</Link>
-          <Link to="/shadow">My Sessions</Link>
-          <Link to="/bookmarks">My Bookmarks</Link>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <header className="bg-white shadow">
+        <Container>
+          <div className="py-3 flex items-center justify-between min-w-0">
+            <NavLink to="/" end className="text-lg font-bold">Career Compass</NavLink>
 
-          {user ? (
-            <>
-              <Link to="/profile">Profile</Link>
-              <button onClick={handleLogout} className="nav-button">Logout</button>
-            </>
-          ) : (
-            <Link to="/profile" className="nav-button">Login</Link>
-          )}
-        </div>
-      </nav>
+            <nav className="flex items-center gap-4 text-sm">
+              <NavLink to="/" end className={navLinkClass}>Home</NavLink>
+              <NavLink to="/explore" className={navLinkClass}>Explore</NavLink>
+              <NavLink to="/shadow" className={navLinkClass}>My Sessions</NavLink>
 
-      <main className="main-content">
-        <Outlet />
+              {/* ✅ Only show My Bookmarks if not a host */}
+              {role !== "host" && (
+                <NavLink to="/bookmarks" className={navLinkClass}>My Bookmarks</NavLink>
+              )}
+
+              {user ? (
+                <>
+                  <NavLink to="/profile" className={navLinkClass}>Profile</NavLink>
+                  <button onClick={handleLogout} className="px-2 py-1">Logout</button>
+                </>
+              ) : (
+                <NavLink to="/login" className={navLinkClass}>Login</NavLink>
+              )}
+            </nav>
+          </div>
+        </Container>
+      </header>
+
+      <main className="flex-1">
+        <Container className="py-6">
+          <Outlet />
+        </Container>
       </main>
 
-      <footer className="footer">
-        <div className="footer-links">
-          <Link to="/about">About</Link>
-          <Link to="/terms">Terms</Link>
-          <Link to="/contact">Contact</Link>
-        </div>
-        <p className="footer-copy">
-          &copy; {new Date().getFullYear()} Career Compass. All rights reserved.
-        </p>
+      <footer className="bg-gray-100">
+        <Container>
+          <div className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500">
+            <div className="flex gap-4">
+              <NavLink to="/about" className={navLinkClass}>About</NavLink>
+              <NavLink to="/terms" className={navLinkClass}>Terms</NavLink>
+              <NavLink to="/contact" className={navLinkClass}>Contact</NavLink>
+            </div>
+            <p>© {new Date().getFullYear()} Career Compass. All rights reserved.</p>
+          </div>
+        </Container>
       </footer>
     </div>
   );

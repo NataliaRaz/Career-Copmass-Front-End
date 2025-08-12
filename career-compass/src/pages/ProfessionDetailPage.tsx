@@ -3,7 +3,6 @@ import { defaultData } from "../data/defaultData";
 import { supabase } from "../utils/supabaseClient";
 import { useState } from "react";
 import type { Profession, Role } from "../types/types";
-import './SharedStyles.css';
 
 export default function ProfessionDetailPage() {
   const { id } = useParams();
