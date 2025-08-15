@@ -11,6 +11,7 @@ import UnifiedSignUpPage from "./pages/UnifiedSignUpPage";
 import ShadowSessionDetailPage from "./pages/ShadowSessionDetailPage";
 import ProfessionDetailPage from "./pages/ProfessionDetailPage";
 import LoginPage from "./pages/LoginPage";
+import OpportunitiesPage from "./pages/OpportunitiesPage";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="sessions" element={<SessionsPage />} />
 
         {/* Opportunities */}
+        <Route path="opportunities" element={<OpportunitiesPage />} />
         <Route path="opportunity/new" element={<PostOpportunityPage />} />
         <Route path="opportunity/:id" element={<PostOpportunityPage />} />
         <Route path="edit-opportunity/:id" element={<PostOpportunityPage />} />

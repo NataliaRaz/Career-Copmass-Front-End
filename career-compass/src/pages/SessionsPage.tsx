@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabaseClient";
 import Hero from "../components/Hero";
@@ -6,13 +6,15 @@ import Container from "../components/Container";
 
 export default function SessionsPage() {
   const [allSessions, setAllSessions] = useState<any[]>([]);
-  const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [tab, setTab] = useState<"all" | "upcoming" | "past">("all"); // DEFAULT = all
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
 
       if (!user) {
@@ -33,23 +35,38 @@ export default function SessionsPage() {
   }, []);
 
   const now = new Date();
-  const upcoming = allSessions
-    .filter((s) => s.opportunities?.date && new Date(s.opportunities.date) >= now)
-    .sort(
+
+  const { upcoming, past } = useMemo(() => {
+    const u = allSessions
+      .filter((s) => s.opportunities?.date && new Date(s.opportunities.date) >= now)
+      .sort(
+        (a, b) =>
+          new Date(a.opportunities.date).getTime() -
+          new Date(b.opportunities.date).getTime()
+      );
+
+    const p = allSessions
+      .filter((s) => s.opportunities?.date && new Date(s.opportunities.date) < now)
+      .sort(
+        (a, b) =>
+          new Date(b.opportunities.date).getTime() -
+          new Date(a.opportunities.date).getTime()
+      );
+
+    return { upcoming: u, past: p };
+  }, [allSessions]);
+
+  const allList = useMemo(() => {
+    // merge upcoming + past, sorted by date asc (upcoming first, then past)
+    const merged = [...upcoming, ...past];
+    return merged.sort(
       (a, b) =>
         new Date(a.opportunities.date).getTime() -
         new Date(b.opportunities.date).getTime()
     );
+  }, [upcoming, past]);
 
-  const past = allSessions
-    .filter((s) => s.opportunities?.date && new Date(s.opportunities.date) < now)
-    .sort(
-      (a, b) =>
-        new Date(b.opportunities.date).getTime() -
-        new Date(a.opportunities.date).getTime()
-    );
-
-  const list = tab === "upcoming" ? upcoming : past;
+  const list = tab === "all" ? allList : tab === "upcoming" ? upcoming : past;
 
   const handleCancel = async (sessionId: number) => {
     if (!confirm("Cancel this session?")) return;
@@ -72,7 +89,7 @@ export default function SessionsPage() {
           bgClassName="bg-gray-100"
         />
         <section className="relative overflow-hidden bg-white">
-          <Container>
+          <Container className="py-14">
             <p className="text-center text-gray-600">Loading…</p>
           </Container>
         </section>
@@ -88,8 +105,8 @@ export default function SessionsPage() {
           subtitle="Track and manage your shadowing sessions"
           bgClassName="bg-gray-100"
         />
-        <section className="bg-gray-50 min-h-screen">
-          <Container className="pb-14">
+        <section className="relative overflow-hidden bg-white">
+          <Container className="py-14">
             <div className="mx-auto max-w-md rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm">
               <p className="text-gray-700 mb-4">
                 Please log in to view and manage your sessions.
@@ -109,29 +126,43 @@ export default function SessionsPage() {
 
   return (
     <>
-      {/* Hero (matches Home) */}
       <Hero
         title="My Sessions"
         subtitle="Track and manage your shadowing sessions"
         bgClassName="bg-gray-100"
       />
 
-      {/* Section (matches Home’s “How it works” section structure) */}
       <section className="relative overflow-hidden bg-white">
-        <Container>
+        <Container className="py-14">
           {/* Header */}
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900">
-              {tab === "upcoming" ? "Your Upcoming Sessions" : "Your Past Sessions"}
+              {tab === "all"
+                ? "All Your Sessions"
+                : tab === "upcoming"
+                ? "Your Upcoming Sessions"
+                : "Your Past Sessions"}
             </h2>
             <p className="mt-2 text-gray-600">
-              {tab === "upcoming"
+              {tab === "all"
+                ? "Browse everything in one place."
+                : tab === "upcoming"
                 ? "See what’s coming up and manage your plans."
                 : "Look back at what you’ve completed."}
             </p>
 
-            {/* Tabs styled simply above the grid */}
+            {/* Tabs */}
             <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setTab("all")}
+                className={`px-4 py-2 rounded-md text-sm font-medium border transition ${
+                  tab === "all"
+                    ? "border-blue-700 text-blue-700"
+                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                All
+              </button>
               <button
                 onClick={() => setTab("upcoming")}
                 className={`px-4 py-2 rounded-md text-sm font-medium border transition ${
@@ -155,16 +186,21 @@ export default function SessionsPage() {
             </div>
           </div>
 
-          {/* Grid of Home-style cards */}
+          {/* Cards */}
           {list.length === 0 ? (
             <p className="text-center text-gray-600">
-              {tab === "upcoming" ? "No upcoming sessions." : "No past sessions."}
+              {tab === "all"
+                ? "No sessions yet."
+                : tab === "upcoming"
+                ? "No upcoming sessions."
+                : "No past sessions."}
             </p>
           ) : (
             <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
               {list.map((s, i) => {
                 const opp = s.opportunities;
                 const dateObj = opp?.date ? new Date(opp.date) : null;
+                const isUpcoming = !!dateObj && dateObj >= now;
                 const daysAgo = opp?.created_at
                   ? Math.floor(
                       (Date.now() - new Date(opp.created_at).getTime()) /
@@ -234,7 +270,8 @@ export default function SessionsPage() {
                         </span>
                       )}
 
-                      {tab === "upcoming" ? (
+                      {/* Show actions only for upcoming sessions (works in All + Upcoming tabs) */}
+                      {isUpcoming && (
                         <>
                           <button
                             onClick={() => handleCancel(s.id)}
@@ -249,10 +286,10 @@ export default function SessionsPage() {
                             Reschedule
                           </button>
                         </>
-                      ) : null}
+                      )}
                     </div>
 
-                    {/* subtle hover accent (same as Home) */}
+                    {/* subtle hover accent */}
                     <div className="pointer-events-none absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 transition-opacity group-hover:opacity-100 rounded-bl-full" />
                   </li>
                 );

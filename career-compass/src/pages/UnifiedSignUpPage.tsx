@@ -44,7 +44,7 @@ export default function UnifiedSignUpPage() {
         alert("Profile creation error: " + insertError.message);
       } else {
         alert(`${role === "host" ? "Host" : "User"} account created!`);
-        navigate(role === "host" ? "/host-dashboard" : "/profile");
+        navigate("/profile");
       }
     }
   };

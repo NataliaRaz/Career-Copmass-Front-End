@@ -38,11 +38,22 @@ export default function UserProfilePage() {
   const [preferences, setPreferences] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  // host-only: deleting state
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const isHost = useMemo(() => profile?.role === "host", [profile]);
+
+  // shared “button look” classes so <a> and <button> match exactly
+  const buttonLike =
+    "flex-1 inline-flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium border border-gray-300 bg-white text-center hover:bg-gray-50 transition";
+  const viewBtn = `${buttonLike} text-gray-700`;
+  const deleteBtn = `${buttonLike} text-red-600`;
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
       if (!user) return;
 
@@ -78,23 +89,35 @@ export default function UserProfilePage() {
       setBookmarksCount(bmCount || 0);
 
       // Sessions (split upcoming/past + recent upcoming list)
-      const { data: sessionsData, error } = await supabase
+      const { data: sessionsData } = await supabase
         .from("shadow_sessions")
-        .select("id, opportunity_id, opportunities(id, title, description, format, duration, created_at, date)")
+        .select(
+          "id, opportunity_id, opportunities(id, title, description, format, duration, created_at, date)"
+        )
         .eq("user_id", user.id);
-
-      console.log(error);
 
       if (sessionsData) {
         const now = new Date();
 
         const upcoming = sessionsData
-          .filter((s: any) => s.opportunities?.date && new Date(s.opportunities.date) >= now)
-          .sort((a: any, b: any) => new Date(a.opportunities.date).getTime() - new Date(b.opportunities.date).getTime());
+          .filter(
+            (s: any) => s.opportunities?.date && new Date(s.opportunities.date) >= now
+          )
+          .sort(
+            (a: any, b: any) =>
+              new Date(a.opportunities.date).getTime() -
+              new Date(b.opportunities.date).getTime()
+          );
 
         const past = sessionsData
-          .filter((s: any) => s.opportunities?.date && new Date(s.opportunities.date) < now)
-          .sort((a: any, b: any) => new Date(b.opportunities.date).getTime() - new Date(a.opportunities.date).getTime());
+          .filter(
+            (s: any) => s.opportunities?.date && new Date(s.opportunities.date) < now
+          )
+          .sort(
+            (a: any, b: any) =>
+              new Date(b.opportunities.date).getTime() -
+              new Date(a.opportunities.date).getTime()
+          );
 
         setSessionsUpcomingCount(upcoming.length);
         setSessionsPastCount(past.length);
@@ -172,7 +195,8 @@ export default function UserProfilePage() {
         .upload(path, file, { upsert: true });
       if (uploadErr) throw uploadErr;
 
-      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = data.publicUrl;
 
       const { error: updateErr } = await supabase
         .from("profiles")
@@ -187,6 +211,63 @@ export default function UserProfilePage() {
       setAvatarUploading(false);
     }
   };
+
+  // HOST: Delete an opportunity
+  const handleDeleteOpportunity = async (id: number) => {
+    if (!user) return;
+    const ok = window.confirm(
+      "Delete this opportunity? This will also remove all shadow sessions and bookmarks for it. This cannot be undone."
+    );
+    if (!ok) return;
+
+    try {
+      setDeletingId(id);
+
+      // 1) Delete all shadow sessions for this opportunity
+      const { error: ssErr } = await supabase
+        .from("shadow_sessions")
+        .delete()
+        .eq("opportunity_id", id);
+      if (ssErr) {
+        alert("Failed to delete related shadow sessions: " + ssErr.message);
+        return;
+      }
+
+      // 2) Delete all bookmarks for this opportunity
+      const { error: bmErr } = await supabase
+        .from("bookmarks")
+        .delete()
+        .eq("opportunity_id", id);
+      if (bmErr) {
+        alert("Failed to delete related bookmarks: " + bmErr.message);
+        return;
+      }
+
+      // 3) Delete the opportunity (extra guard by user_id)
+      const { error: oppErr } = await supabase
+        .from("opportunities")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", user.id);
+      if (oppErr) {
+        alert("Failed to delete opportunity: " + oppErr.message);
+        return;
+      }
+
+      // Optimistically update UI
+      setRecentMyOpps((prev) => prev.filter((o) => o.id !== id));
+      setPostedCount((c) => Math.max(0, (c || 0) - 1));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const formatChip = (format?: string | null) =>
+    format ? (
+      <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">
+        {String(format).charAt(0).toUpperCase() + String(format).slice(1)}
+      </span>
+    ) : null;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -262,7 +343,9 @@ export default function UserProfilePage() {
 
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Skills (comma-separated)</label>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Skills (comma-separated)
+                  </label>
                   <input
                     value={skillsInput}
                     onChange={(e) => setSkillsInput(e.target.value)}
@@ -296,12 +379,12 @@ export default function UserProfilePage() {
 
         {/* Quick stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-         {!isHost && ( 
-          <Card>
-            <p className="text-sm text-gray-500">Bookmarks</p>
-            <p className="mt-1 text-3xl font-semibold text-gray-900">{bookmarksCount}</p>
-          </Card>
-         )}
+          {!isHost && (
+            <Card>
+              <p className="text-sm text-gray-500">Bookmarks</p>
+              <p className="mt-1 text-3xl font-semibold text-gray-900">{bookmarksCount}</p>
+            </Card>
+          )}
           <Card>
             <p className="text-sm text-gray-500">Upcoming Sessions</p>
             <p className="mt-1 text-3xl font-semibold text-gray-900">{sessionsUpcomingCount}</p>
@@ -322,132 +405,151 @@ export default function UserProfilePage() {
 
         {/* Upcoming sessions (latest 3) */}
         {!isHost && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Upcoming Sessions</h2>
-            <Link to="/sessions" className="text-sm text-blue-700 hover:underline">View all</Link>
-          </div>
-
-          {recentUpcoming.length === 0 ? (
-            <Card><p className="text-gray-600">No upcoming sessions.</p></Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentUpcoming.map((s) => {
-                const opp = s.opportunities;
-                const dateObj = opp?.date ? new Date(opp.date) : null;
-                const daysAgo = Math.floor((Date.now() - new Date(opp.created_at).getTime()) / (1000 * 60 * 60 * 24));
-
-                return (
-                  <Card key={s.id}>
-                    <div>
-                      <Link to={`/shadow/${opp.id}`}>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
-                          {opp.title}
-                        </h3>
-                      </Link>
-
-                      {opp.description && (
-                        <p className="text-gray-700 text-sm mb-3">
-                          {opp.description.slice(0, 110)}
-                          {opp.description.length > 110 ? "..." : ""}
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                        {opp.format && (
-                          <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">{opp.format}</span>
-                        )}
-                        {opp.duration && (
-                          <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">{opp.duration}</span>
-                        )}
-                        <span className="ml-auto">
-                          🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
-                        </span>
-                      </div>
-
-                      {dateObj && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          📅 {dateObj.toLocaleDateString()} @{" "}
-                          {dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-6 flex flex-col gap-2">
-                      <Link
-                        to={`/shadow/${opp.id}`}
-                        className="w-full px-3 py-2 rounded-md text-sm font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition"
-                      >
-                        View Details
-                      </Link>
-                    </div>
-                  </Card>
-                );
-              })}
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Upcoming Sessions</h2>
+              <Link to="/sessions" className="text-sm text-blue-700 hover:underline">
+                View all
+              </Link>
             </div>
-          )}
-        </section>
+
+            {recentUpcoming.length === 0 ? (
+              <Card>
+                <p className="text-gray-600">No upcoming sessions.</p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recentUpcoming.map((s) => {
+                  const opp = s.opportunities;
+                  const dateObj = opp?.date ? new Date(opp.date) : null;
+                  const daysAgo = Math.floor(
+                    (Date.now() - new Date(opp.created_at).getTime()) / (1000 * 60 * 60 * 24)
+                  );
+
+                  return (
+                    <Card key={s.id}>
+                      <div className="flex h-full flex-col group">
+                        {/* Top content */}
+                        <div>
+                          <Link to={`/shadow/${opp.id}`}>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
+                              {opp.title}
+                            </h3>
+                          </Link>
+
+                          {opp.description && (
+                            <p className="text-gray-700 text-sm">
+                              {opp.description.slice(0, 160)}
+                              {opp.description.length > 160 ? "..." : ""}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Footer pinned to bottom */}
+                        <div className="mt-auto pt-4">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                            {formatChip(opp.format)}
+                            {opp.duration && (
+                              <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">
+                                {opp.duration}
+                              </span>
+                            )}
+                            <span className="ml-auto">
+                              🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
+                            </span>
+                          </div>
+
+                          {dateObj && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              📅 {dateObj.toLocaleDateString()} @{" "}
+                              {dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          )}
+
+                          <div className="mt-3 flex gap-2">
+                            <Link to={`/shadow/${opp.id}`} className={viewBtn}>
+                              View Details
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         )}
 
         {/* Bookmarks (latest 3) */}
         {!isHost && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Bookmarks</h2>
-            <Link to="/bookmarks" className="text-sm text-blue-700 hover:underline">View all</Link>
-          </div>
-
-          {recentBookmarks.length === 0 ? (
-            <Card><p className="text-gray-600">No bookmarks yet.</p></Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentBookmarks.map((b) => {
-                const opp = b.opportunities;
-                const daysAgo = Math.floor((Date.now() - new Date(opp.created_at).getTime()) / (1000 * 60 * 60 * 24));
-
-                return (
-                  <Card key={b.id}>
-                    <div>
-                      <Link to={`/shadow/${opp.id}`}>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
-                          {opp.title}
-                        </h3>
-                      </Link>
-
-                      {opp.description && (
-                        <p className="text-gray-700 text-sm mb-3">
-                          {opp.description.slice(0, 110)}
-                          {opp.description.length > 110 ? "..." : ""}
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                        {opp.format && (
-                          <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">{opp.format}</span>
-                        )}
-                        {opp.duration && (
-                          <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">{opp.duration}</span>
-                        )}
-                        <span className="ml-auto">
-                          🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-6">
-                      <Link
-                        to={`/shadow/${opp.id}`}
-                        className="w-full px-3 py-2 rounded-md text-sm font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition"
-                      >
-                        View Details
-                      </Link>
-                    </div>
-                  </Card>
-                );
-              })}
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Bookmarks</h2>
+              <Link to="/bookmarks" className="text-sm text-blue-700 hover:underline">
+                View all
+              </Link>
             </div>
-          )}
-        </section>
+
+            {recentBookmarks.length === 0 ? (
+              <Card>
+                <p className="text-gray-600">No bookmarks yet.</p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recentBookmarks.map((b) => {
+                  const opp = b.opportunities;
+                  const daysAgo = Math.floor(
+                    (Date.now() - new Date(opp.created_at).getTime()) / (1000 * 60 * 60 * 24)
+                  );
+
+                  return (
+                    <Card key={b.id}>
+                      <div className="flex h-full flex-col group">
+                        {/* Top content */}
+                        <div>
+                          <Link to={`/shadow/${opp.id}`}>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
+                              {opp.title}
+                            </h3>
+                          </Link>
+
+                          {opp.description && (
+                            <p className="text-gray-700 text-sm">
+                              {opp.description.slice(0, 160)}
+                              {opp.description.length > 160 ? "..." : ""}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Footer pinned */}
+                        <div className="mt-auto pt-4">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                            {formatChip(opp.format)}
+                            {opp.duration && (
+                              <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">
+                                {opp.duration}
+                              </span>
+                            )}
+                            <span className="ml-auto">
+                              🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
+                            </span>
+                          </div>
+
+                          {/* Make the button full width like other sections */}
+                          <div className="mt-3 flex gap-2">
+                            <Link to={`/shadow/${opp.id}`} className={viewBtn}>
+                              View Details
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         )}
 
         {/* Host-only: My Opportunities */}
@@ -465,54 +567,73 @@ export default function UserProfilePage() {
                 </Link>
               </div>
 
-              <Link to="/host/opportunities" className="text-sm text-blue-700 hover:underline">
+              <Link to="/opportunities" className="text-sm text-blue-700 hover:underline">
                 View all
               </Link>
             </div>
 
             {recentMyOpps.length === 0 ? (
-              <Card><p className="text-gray-600">No opportunities posted yet.</p></Card>
+              <Card>
+                <p className="text-gray-600">No opportunities posted yet.</p>
+              </Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {recentMyOpps.map((op) => {
                   const daysAgo = Math.floor(
                     (Date.now() - new Date(op.created_at).getTime()) / (1000 * 60 * 60 * 24)
                   );
+                  const isDeleting = deletingId === op.id;
+
                   return (
                     <Card key={op.id}>
-                      <div>
-                        <Link to={`/shadow/${op.id}`}>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
-                            {op.title}
-                          </h3>
-                        </Link>
-                        {op.description && (
-                          <p className="text-gray-700 text-sm mb-3">
-                            {op.description.slice(0, 110)}
-                            {op.description.length > 110 ? "..." : ""}
-                          </p>
-                        )}
+                      <div className="flex h-full flex-col group">
+                        {/* Top content */}
+                        <div>
+                          <Link to={`/shadow/${op.id}`}>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2 transition group-hover:text-blue-700">
+                              {op.title}
+                            </h3>
+                          </Link>
 
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                          {op.format && (
-                            <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">{op.format}</span>
+                          {op.description && (
+                            <p className="text-gray-700 text-sm">
+                              {op.description.slice(0, 160)}
+                              {op.description.length > 160 ? "..." : ""}
+                            </p>
                           )}
-                          {op.duration && (
-                            <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">{op.duration}</span>
-                          )}
-                          <span className="ml-auto">
-                            🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
-                          </span>
                         </div>
-                      </div>
 
-                      <div className="mt-6">
-                        <Link
-                          to={`/shadow/${op.id}`}
-                          className="w-full px-3 py-2 rounded-md text-sm font-medium border border-gray-300 text-gray-700 text-center hover:bg-gray-50 transition"
-                        >
-                          View Details
-                        </Link>
+                        {/* Footer pinned */}
+                        <div className="mt-auto pt-4">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                            {formatChip(op.format)}
+                            {op.duration && (
+                              <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">
+                                {op.duration}
+                              </span>
+                            )}
+                            <span className="ml-auto">
+                              🕓 Posted {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex gap-2">
+                            <Link to={`/shadow/${op.id}`} className={viewBtn}>
+                              View Details
+                            </Link>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOpportunity(op.id)}
+                              disabled={isDeleting}
+                              className={`${deleteBtn} ${
+                                isDeleting ? "opacity-50 cursor-not-allowed" : ""
+                              }`}
+                            >
+                              {isDeleting ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </Card>
                   );
@@ -521,8 +642,6 @@ export default function UserProfilePage() {
             )}
           </section>
         )}
-
-
       </Container>
     </div>
   );

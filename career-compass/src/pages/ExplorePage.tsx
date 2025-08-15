@@ -72,8 +72,7 @@ export default function ExplorePage() {
 
   const fetchOpportunities = async (
     q: string,
-    filters: { format?: string; duration?: string
-    }
+    filters: { format?: string; duration?: string }
   ) => {
     setLoading(true);
     setErrorMsg(null);
@@ -101,10 +100,8 @@ export default function ExplorePage() {
   };
 
   const handleBookmark = async (opportunityId: number | undefined) => {
-    if (!opportunityId) {
-      return;
-    }
-    
+    if (!opportunityId) return;
+
     if (!user) {
       alert("You need to log in to bookmark.");
       return;
@@ -173,119 +170,126 @@ export default function ExplorePage() {
         </div>
       </Hero>
 
-      {/* Results */}
-      <Container className="pb-14">
-        {loading && <p className="text-center text-gray-500">Loading…</p>}
-        {errorMsg && <p className="text-center text-red-600">{errorMsg}</p>}
+      {/* Results on white background (matches Home) */}
+      <section className="relative overflow-hidden bg-white">
+        <Container className="py-14">
+          {loading && <p className="text-center text-gray-500">Loading…</p>}
+          {errorMsg && <p className="text-center text-red-600">{errorMsg}</p>}
 
-        {!loading && !errorMsg && opportunities.length === 0 ? (
-          <p className="text-center text-gray-500">No shadowing opportunities found.</p>
-        ) : (
-          <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {opportunities.map((op, i) => {
-              const daysAgo = op.created_at ? Math.floor(
-                (Date.now() - new Date(op.created_at).getTime()) / (1000 * 60 * 60 * 24)
-              ) : 0;
-              const isBookmarked = op.id ? bookmarkedIds.includes(op.id) : false;
-              const isScheduled = op.id ? scheduledIds.includes(op.id) : false;
+          {!loading && !errorMsg && opportunities.length === 0 ? (
+            <p className="text-center text-gray-500">
+              No shadowing opportunities found.
+            </p>
+          ) : (
+            <ol className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {opportunities.map((op, i) => {
+                const daysAgo = op.created_at
+                  ? Math.floor(
+                      (Date.now() - new Date(op.created_at).getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )
+                  : 0;
+                const isBookmarked = op.id ? bookmarkedIds.includes(op.id) : false;
+                const isScheduled = op.id ? scheduledIds.includes(op.id) : false;
 
-              return (
-                <li
-                  key={op.id}
-                  className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-                >
-                  <div>
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-600 text-blue-700 font-semibold">
-                        {i + 1}
+                return (
+                  <li
+                    key={op.id}
+                    className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+                  >
+                    <div>
+                      <div className="mb-3 flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-600 text-blue-700 font-semibold">
+                          {i + 1}
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition">
+                          {op.title}
+                        </h3>
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition">
-                        {op.title}
-                      </h3>
-                    </div>
 
-                    {op.mentor_name && (
-                      <p className="text-sm text-gray-600 mb-1">
-                        👤 {op.mentor_name}
-                        {op.mentor_title ? `, ${op.mentor_title}` : ""}
+                      {op.mentor_name && (
+                        <p className="text-sm text-gray-600 mb-1">
+                          👤 {op.mentor_name}
+                          {op.mentor_title ? `, ${op.mentor_title}` : ""}
+                        </p>
+                      )}
+
+                      <p className="text-sm text-gray-600 mb-3">
+                        {op.description?.slice(0, 110)}
+                        {op.description && op.description.length > 110 ? "..." : ""}
                       </p>
-                    )}
 
-                    <p className="text-sm text-gray-600 mb-3">
-                      {op.description?.slice(0, 110)}
-                      {op.description && op.description.length > 110 ? "..." : ""}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                      {op.format && (
-                        <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">
-                          {op.format}
-                        </span>
-                      )}
-                      {op.duration && (
-                        <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">
-                          {op.duration}
-                        </span>
-                      )}
-                      <span className="ml-auto">
-                        🕓 {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex flex-col gap-3">
-                    <Link
-                      to={`/shadow/${op.id}`}
-                      className="inline-flex w-full items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                    >
-                      View Details
-                    </Link>
-
-                    {user ? (
-                      <>
-                        <button
-                          onClick={() => handleBookmark(op.id)}
-                          disabled={isBookmarked}
-                          className={`inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${
-                            isBookmarked
-                              ? "bg-green-50 text-green-700 border border-green-300 cursor-not-allowed"
-                              : "border border-blue-700 text-blue-700 hover:bg-blue-50"
-                          }`}
-                        >
-                          {isBookmarked ? "✓ Bookmarked" : "Bookmark"}
-                        </button>
-
-                        {isScheduled ? (
-                          <button
-                            disabled
-                            className="inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium bg-green-50 text-green-700 border border-green-300"
-                          >
-                            ✓ Scheduled
-                          </button>
-                        ) : (
-                          <Link
-                            to={`/shadow/${op.id}`}
-                            className="inline-flex w-full items-center justify-center rounded-md border border-blue-700 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition"
-                          >
-                            Shadow
-                          </Link>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                        {op.format && (
+                          <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-1">
+                            {op.format}
+                          </span>
                         )}
-                      </>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center">
-                        Log in to bookmark or shadow
-                      </p>
-                    )}
-                  </div>
+                        {op.duration && (
+                          <span className="rounded-full bg-green-100 text-green-700 px-2 py-1">
+                            {op.duration}
+                          </span>
+                        )}
+                        <span className="ml-auto">
+                          🕓 {daysAgo} day{daysAgo !== 1 ? "s" : ""} ago
+                        </span>
+                      </div>
+                    </div>
 
-                  {/* Subtle hover accent */}
-                  <div className="pointer-events-none absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 transition-opacity group-hover:opacity-100 rounded-bl-full" />
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </Container>
+                    <div className="mt-6 flex flex-col gap-3">
+                      <Link
+                        to={`/shadow/${op.id}`}
+                        className="inline-flex w-full items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                      >
+                        View Details
+                      </Link>
+
+                      {user ? (
+                        <>
+                          <button
+                            onClick={() => handleBookmark(op.id)}
+                            disabled={isBookmarked}
+                            className={`inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${
+                              isBookmarked
+                                ? "bg-green-50 text-green-700 border border-green-300 cursor-not-allowed"
+                                : "border border-blue-700 text-blue-700 hover:bg-blue-50"
+                            }`}
+                          >
+                            {isBookmarked ? "✓ Bookmarked" : "Bookmark"}
+                          </button>
+
+                          {isScheduled ? (
+                            <button
+                              disabled
+                              className="inline-flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium bg-green-50 text-green-700 border border-green-300"
+                            >
+                              ✓ Scheduled
+                            </button>
+                          ) : (
+                            <Link
+                              to={`/shadow/${op.id}`}
+                              className="inline-flex w-full items-center justify-center rounded-md border border-blue-700 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition"
+                            >
+                              Shadow
+                            </Link>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs text-gray-400 text-center">
+                          Log in to bookmark or shadow
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Subtle hover accent */}
+                    <div className="pointer-events-none absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 transition-opacity group-hover:opacity-100 rounded-bl-full" />
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </Container>
+      </section>
     </div>
   );
 }

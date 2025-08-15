@@ -1,4 +1,3 @@
-// src/layouts/Layout.tsx
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
@@ -6,7 +5,7 @@ import Container from "../components/Container";
 
 export default function Layout() {
   const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null); // ✅ Track role
+  const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -57,21 +56,21 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Header (clamped) */}
       <header className="bg-white shadow">
         <Container>
           <div className="py-3 flex items-center justify-between min-w-0">
             <NavLink to="/" end className="text-lg font-bold">Career Compass</NavLink>
-
             <nav className="flex items-center gap-4 text-sm">
               <NavLink to="/" end className={navLinkClass}>Home</NavLink>
               <NavLink to="/explore" className={navLinkClass}>Explore</NavLink>
               <NavLink to="/shadow" className={navLinkClass}>My Sessions</NavLink>
-
-              {/* ✅ Only show My Bookmarks if not a host */}
+              {role === 'host' && (
+                <NavLink to="opportunities" className="...">My Opportunities</NavLink>
+              )}
               {role !== "host" && (
                 <NavLink to="/bookmarks" className={navLinkClass}>My Bookmarks</NavLink>
               )}
-
               {user ? (
                 <>
                   <NavLink to="/profile" className={navLinkClass}>Profile</NavLink>
@@ -85,12 +84,12 @@ export default function Layout() {
         </Container>
       </header>
 
+      {/* Main (NO Container — lets pages do full-bleed sections) */}
       <main className="flex-1">
-        <Container className="py-6">
-          <Outlet />
-        </Container>
+        <Outlet />
       </main>
 
+      {/* Footer (clamped) */}
       <footer className="bg-gray-100">
         <Container>
           <div className="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-500">
